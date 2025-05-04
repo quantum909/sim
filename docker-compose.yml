@@ -18,8 +18,8 @@ services:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/simstudio
       - POSTGRES_URL=postgresql://postgres:postgres@db:5432/simstudio
-      - BETTER_AUTH_URL=http://simstudio.local:3003
-      - NEXT_PUBLIC_APP_URL=http://simstudio.local:3003
+      - BETTER_AUTH_URL=https://simstudio.local
+      - NEXT_PUBLIC_APP_URL=https://simstudio.local
       - BETTER_AUTH_SECRET=your_auth_secret_here
       - ENCRYPTION_KEY=your_encryption_key_here
       - FREESTYLE_API_KEY=placeholder
