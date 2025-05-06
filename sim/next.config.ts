@@ -1,4 +1,6 @@
+import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next'
+import path from 'path'
 
 const nextConfig: NextConfig = {
   devIndicators: false,
@@ -9,20 +11,40 @@ const nextConfig: NextConfig = {
       'api.stability.ai',
     ]
   },
-  // Always use 'standalone' output to support API routes
   output: 'standalone',
-  webpack: (config, { isServer }) => {
-    // Configure webpack to use memory cache instead of filesystem cache
-    // This avoids the serialization of large strings during the build process
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  turbopack: {
+    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.json'],
+  },
+  experimental: {
+    optimizeCss: true,
+  },
+  webpack: (config, { isServer, dev }) => {
+    // Skip webpack configuration in development when using Turbopack
+    if (dev && process.env.NEXT_RUNTIME === 'turbopack') {
+      return config
+    }
+    
+    // Configure webpack to use filesystem cache for faster incremental builds
     if (config.cache) {
       config.cache = {
-        type: 'memory',
-        maxGenerations: 1,
+        type: 'filesystem',
+        buildDependencies: {
+          config: [__filename]
+        },
+        cacheDirectory: path.resolve(process.cwd(), '.next/cache/webpack')
       }
     }
 
     return config
   },
+  transpilePackages: [
+    'prettier',
+    '@react-email/components',
+    '@react-email/render'
+  ],
   // Only include headers when not building for standalone export
   async headers() {
     return [
@@ -84,7 +106,7 @@ const nextConfig: NextConfig = {
                },
                {
                  key: 'Content-Security-Policy',
-                 value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://apis.google.com https://*.vercel-insights.com https://vercel.live https://*.vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.googleusercontent.com https://*.google.com https://*.atlassian.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:11434 http://host.docker.internal:11434 https://*.googleapis.com https://*.amazonaws.com https://*.s3.amazonaws.com https://*.vercel-insights.com https://*.atlassian.com https://vercel.live https://*.vercel.live; frame-src https://drive.google.com https://*.google.com; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'",
+                 value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://apis.google.com https://*.vercel-insights.com https://vercel.live https://*.vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.googleusercontent.com https://*.google.com https://*.atlassian.com; media-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:11434 http://host.docker.internal:11434 https://*.googleapis.com https://*.amazonaws.com https://*.s3.amazonaws.com https://*.vercel-insights.com https://*.atlassian.com https://vercel.live https://*.vercel.live; frame-src https://drive.google.com https://*.google.com; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'",
                },
              ],
            },
@@ -92,4 +114,22 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+const sentryConfig = {
+  silent: true,
+  org: process.env.SENTRY_ORG || '',
+  project: process.env.SENTRY_PROJECT || '',
+  authToken: process.env.SENTRY_AUTH_TOKEN || undefined,
+  disableSourceMapUpload: process.env.NODE_ENV !== 'production',
+  autoInstrumentServerFunctions: process.env.NODE_ENV === 'production',
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludePerformanceMonitoring: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true,
+  },
+}
+
+export default process.env.NODE_ENV === 'development'
+  ? nextConfig
+  : withSentryConfig(nextConfig, sentryConfig)
