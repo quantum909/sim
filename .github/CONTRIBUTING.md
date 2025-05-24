@@ -3,7 +3,7 @@
 Thank you for your interest in contributing to Sim Studio! Our goal is to provide developers with a powerful, user-friendly platform for building, testing, and optimizing agentic workflows. We welcome contributions in all forms—from bug fixes and design improvements to brand-new features.
 
 > **Project Overview:**  
-> Sim Studio is a monorepo containing the main application (`sim/`) and documentation (`docs/`). The main application is built with Next.js (app router), ReactFlow, Zustand, Shadcn, and Tailwind CSS. Please ensure your contributions follow our best practices for clarity, maintainability, and consistency.
+> Sim Studio is a monorepo using Turborepo, containing the main application (`apps/sim/`), documentation (`apps/docs/`), and shared packages (`packages/`). The main application is built with Next.js (app router), ReactFlow, Zustand, Shadcn, and Tailwind CSS. Please ensure your contributions follow our best practices for clarity, maintainability, and consistency.
 
 ---
 
@@ -130,54 +130,69 @@ Using clear and consistent commit messages makes it easier for everyone to under
 
 To set up your local development environment:
 
-### Option 1: Using Docker (Recommended)
+### Option 1: Using NPM Package (Simplest)
 
-Docker provides a consistent development environment with all dependencies pre-configured.
+The easiest way to run Sim Studio locally is using our NPM package:
 
-1. **Clone the Repository:**
+```bash
+npx simstudio
+```
 
-   ```bash
-   git clone https://github.com/<your-username>/sim.git
-   cd sim
-   ```
+After running this command, open [http://localhost:3000/](http://localhost:3000/) in your browser.
 
-2. **Start the Docker Environment:**
+#### Options
 
-   ```bash
-   docker compose up -d
-   ```
+- `-p, --port <port>`: Specify the port to run Sim Studio on (default: 3000)
+- `--no-pull`: Skip pulling the latest Docker images
 
-   Or use the convenience script which handles environment setup and migrations:
+#### Requirements
 
-   ```bash
-   chmod +x scripts/start_simstudio_docker.sh
-   ./scripts/start_simstudio_docker.sh
-   ```
+- Docker must be installed and running on your machine
 
-   This will:
+### Option 2: Using Docker Compose
 
-   - Start a PostgreSQL database container
-   - Build and run the Next.js application with hot-reloading
-   - Set up all necessary environment variables
-   - Apply database migrations automatically
+```bash
+# Clone the repository
+git clone https://github.com/<your-username>/sim.git
+cd sim
 
-3. **View Logs:**
+# Start Sim Studio
+docker compose -f docker-compose.prod.yml up -d
+```
 
-   ```bash
-   docker compose logs -f simstudio
-   ```
+Access the application at [http://localhost:3000/](http://localhost:3000/)
 
-4. **Make Your Changes:**
-   - Edit files in your local directory
-   - Changes will be automatically reflected thanks to hot-reloading
+#### Using Local Models
 
-### Option 2: Using VS Code / Cursor Dev Containers
+To use local models with Sim Studio:
+
+1. Pull models using our helper script:
+
+```bash
+./apps/sim/scripts/ollama_docker.sh pull <model_name>
+```
+
+2. Start Sim Studio with local model support:
+
+```bash
+# With NVIDIA GPU support
+docker compose --profile local-gpu -f docker-compose.ollama.yml up -d
+
+# Without GPU (CPU only)
+docker compose --profile local-cpu -f docker-compose.ollama.yml up -d
+
+# If hosting on a server, update the environment variables in the docker-compose.prod.yml file
+# to include the server's public IP then start again (OLLAMA_URL to i.e. http://1.1.1.1:11434)
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Option 3: Using VS Code / Cursor Dev Containers
 
 Dev Containers provide a consistent and easy-to-use development environment:
 
 1. **Prerequisites:**
 
-   - Visual Studio Code
+   - Visual Studio Code or Cursor
    - Docker Desktop
    - [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension for VS Code
 
@@ -188,58 +203,53 @@ Dev Containers provide a consistent and easy-to-use development environment:
      git clone https://github.com/<your-username>/sim.git
      cd sim
      ```
-   - Open the project in VS Code
+   - Open the project in VS Code/Cursor
    - When prompted, click "Reopen in Container" (or press F1 and select "Remote-Containers: Reopen in Container")
    - Wait for the container to build and initialize
-   - The development environment will be set up in the `sim/` directory
 
 3. **Start Developing:**
 
+   - Run `bun run dev` in the terminal or use the `sim-start` alias
    - All dependencies and configurations are automatically set up
-   - Use the provided aliases (like `sim-start`) to run common commands
    - Your changes will be automatically hot-reloaded
 
 4. **GitHub Codespaces:**
    - This setup also works with GitHub Codespaces if you prefer development in the browser
    - Just click "Code" → "Codespaces" → "Create codespace on main"
 
-### Option 3: Manual Setup
+### Option 4: Manual Setup
 
 If you prefer not to use Docker or Dev Containers:
 
 1. **Clone the Repository:**
    ```bash
    git clone https://github.com/<your-username>/sim.git
-   cd sim/sim
+   cd sim
+   bun install
    ```
-2. **Install Dependencies:**
 
-   - Using NPM:
+2. **Set Up Environment:**
+
+   - Navigate to the app directory:
      ```bash
-     npm install
+     cd apps/sim
      ```
-
-3. **Set Up Environment:**
-
    - Copy `.env.example` to `.env`
-   - Configure database connection and other required authentication variables
+   - Configure required variables (DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL)
 
-4. **Set Up Database:**
+3. **Set Up Database:**
 
-   - You need a PostgreSQL instance running
-   - Run migrations:
-     ```bash
-     npm run db:push
-     ```
+   ```bash
+   bunx drizzle-kit push
+   ```
 
-5. **Run the Development Server:**
+4. **Run the Development Server:**
 
-   - With NPM:
-     ```bash
-     npm run dev
-     ```
+   ```bash
+   bun run dev
+   ```
 
-6. **Make Your Changes and Test Locally.**
+5. **Make Your Changes and Test Locally.**
 
 ### Email Template Development
 
@@ -248,7 +258,7 @@ When working on email templates, you can preview them using a local email previe
 1. **Run the Email Preview Server:**
 
    ```bash
-   npm run email:dev
+   bun run email:dev
    ```
 
 2. **Access the Preview:**
@@ -269,26 +279,26 @@ Sim Studio is built in a modular fashion where blocks and tools extend the platf
 
 ### Where to Add Your Code
 
-- **Blocks:** Create your new block file under the `/sim/blocks/blocks` directory. The name of the file should match the provider name (e.g., `pinecone.ts`).
-- **Tools:** Create a new directory under `/sim/tools` with the same name as the provider (e.g., `/sim/tools/pinecone`).
+- **Blocks:** Create your new block file under the `/apps/sim/blocks/blocks` directory. The name of the file should match the provider name (e.g., `pinecone.ts`).
+- **Tools:** Create a new directory under `/apps/sim/tools` with the same name as the provider (e.g., `/apps/sim/tools/pinecone`).
 
 In addition, you will need to update the registries:
 
-- **Block Registry:** Update the blocks index (`/sim/blocks/index.ts`) to include your new block.
-- **Tool Registry:** Update the tools registry (`/sim/tools/index.ts`) to add your new tool.
+- **Block Registry:** Update the blocks index (`/apps/sim/blocks/index.ts`) to include your new block.
+- **Tool Registry:** Update the tools registry (`/apps/sim/tools/index.ts`) to add your new tool.
 
 ### How to Create a New Block
 
 1. **Create a New File:**  
-   Create a file for your block named after the provider (e.g., `pinecone.ts`) in the `/sim/blocks/blocks` directory.
+   Create a file for your block named after the provider (e.g., `pinecone.ts`) in the `/apps/sim/blocks/blocks` directory.
 
 2. **Create a New Icon:**
-   Create a new icon for your block in the `/sim/components/icons.tsx` file. The icon should follow the same naming convention as the block (e.g., `PineconeIcon`).
+   Create a new icon for your block in the `/apps/sim/components/icons.tsx` file. The icon should follow the same naming convention as the block (e.g., `PineconeIcon`).
 
 3. **Define the Block Configuration:**  
    Your block should export a constant of type `BlockConfig`. For example:
 
-   ```typescript:/sim/blocks/blocks/pinecone.ts
+   ```typescript:/apps/sim/blocks/blocks/pinecone.ts
    import { PineconeIcon } from '@/components/icons'
    import { PineconeResponse } from '@/tools/pinecone/types'
    import { BlockConfig } from '../types'
@@ -313,11 +323,11 @@ In addition, you will need to update the registries:
    ```
 
 4. **Register Your Block:**  
-   Add your block to the blocks registry (`/sim/blocks/registry.ts`):
+   Add your block to the blocks registry (`/apps/sim/blocks/registry.ts`):
 
-   ```typescript:/sim/blocks/registry.ts
+   ```typescript:/apps/sim/blocks/registry.ts
    import { PineconeBlock } from './blocks/pinecone'
-   
+
    // Registry of all available blocks
    export const registry: Record<string, BlockConfig> = {
      // ... existing blocks
@@ -333,7 +343,7 @@ In addition, you will need to update the registries:
 ### How to Create a New Tool
 
 1. **Create a New Directory:**  
-   Create a directory under `/sim/tools` with the same name as the provider (e.g., `/sim/tools/pinecone`).
+   Create a directory under `/apps/sim/tools` with the same name as the provider (e.g., `/apps/sim/tools/pinecone`).
 
 2. **Create Tool Files:**  
    Create separate files for each tool functionality with descriptive names (e.g., `fetch.ts`, `generate_embeddings.ts`, `search_text.ts`) in your tool directory.
@@ -344,7 +354,7 @@ In addition, you will need to update the registries:
 4. **Create an Index File:**  
    Create an `index.ts` file in your tool directory that imports and exports all tools:
 
-   ```typescript:/sim/tools/pinecone/index.ts
+   ```typescript:/apps/sim/tools/pinecone/index.ts
    import { fetchTool } from './fetch'
    import { generateEmbeddingsTool } from './generate_embeddings'
    import { searchTextTool } from './search_text'
@@ -355,7 +365,7 @@ In addition, you will need to update the registries:
 5. **Define the Tool Configuration:**  
    Your tool should export a constant with a naming convention of `{toolName}Tool`. The tool ID should follow the format `{provider}_{tool_name}`. For example:
 
-   ```typescript:/sim/tools/pinecone/fetch.ts
+   ```typescript:/apps/sim/tools/pinecone/fetch.ts
    import { ToolConfig, ToolResponse } from '../types'
    import { PineconeParams, PineconeResponse } from './types'
 
@@ -384,9 +394,9 @@ In addition, you will need to update the registries:
    ```
 
 6. **Register Your Tool:**  
-   Update the tools registry in `/sim/tools/index.ts` to include your new tool:
+   Update the tools registry in `/apps/sim/tools/index.ts` to include your new tool:
 
-   ```typescript:/sim/tools/index.ts
+   ```typescript:/apps/sim/tools/index.ts
    import { fetchTool, generateEmbeddingsTool, searchTextTool } from './pinecone'
    // ... other imports
 

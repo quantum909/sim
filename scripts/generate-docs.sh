@@ -57,4 +57,3 @@ if ! npx tsx ./generate-block-docs.ts; then
 fi
 
 echo "Documentation generation complete!"
-echo "Generated documentation can be found in docs/content/docs/tools/" 
