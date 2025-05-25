@@ -4,6 +4,8 @@ services:
     restart: unless-stopped
     ports:
       - '3000:3000'
+    labels:
+      - dev.orbstack.domains=simstudio.local
     deploy:
       resources:
         limits:
